@@ -77,7 +77,7 @@ export function NewOrderForm({ clientId, onSuccess }: NewOrderFormProps) {
               : "border-black/15 dark:border-white/20 text-foreground/70 hover:bg-black/5 dark:hover:bg-white/5"
           }`}
         >
-          🥐 Facturas
+          🍩 Facturas
         </button>
       </div>
 

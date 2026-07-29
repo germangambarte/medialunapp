@@ -34,10 +34,13 @@ export default function HomePage() {
     <main className="w-full max-w-2xl mx-auto min-h-screen px-4 py-8 flex flex-col gap-6 pb-28">
       {/* Encabezado y Botón Agregar */}
       <header className="flex justify-between items-start gap-4">
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-6">
+        <div className="flex items-center h-10 gap-4">
+          <img src="/croissant-colored.png" alt="icono de medialuna coloreada" className="w-10"/>
           <h1 className="text-2xl font-bold text-foreground">
-            Contabilidad Clientes
+          Medialunapp
           </h1>
+        </div>
 
           <p className="text-sm text-foreground/60">
             Deuda total:{" "}
@@ -49,7 +52,7 @@ export default function HomePage() {
 
         <Link
           to="/clientes"
-          className="flex items-center gap-1.5 h-10 px-4 rounded-full bg-foreground text-background font-medium text-sm transition-colors hover:bg-foreground/90 shrink-0"
+          className="flex items-center gap-1.5 h-10 px-4 pt-4 rounded-full bg-foreground text-background font-medium text-sm transition-colors hover:bg-foreground/90 shrink-0"
         >
           Gestionar Clientes
         </Link>

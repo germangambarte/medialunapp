@@ -146,17 +146,17 @@ export default function ClientDashboardPage() {
       </section>
 
       {/* Barra fija inferior */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 flex w-full max-w-2xl mx-auto gap-4 p-4 text-base font-medium backdrop-blur-md bg-white/70 dark:bg-black/70 border-t border-black/5 dark:border-white/10">
+      <div className="fixed bottom-0 left-0 right-0 z-40 flex w-full max-w-2xl mx-auto gap-4 p-4 text-base font-medium backdrop-blur-md bg-white/20 dark:bg-black/20 border-t border-black/5 dark:border-white/10">
         <button
           type="button"
-          className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-black/15 bg-white px-5 text-black font-medium transition-colors hover:bg-white/90 cursor-pointer"
+          className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-black/15 bg-white px-5 text-black font-medium transition-colors hover:bg-white/70 cursor-pointer"
           onClick={toggleNewOrder}
         >
           Nuevo Pedido
         </button>
         <button
           type="button"
-          className="flex h-12 w-full items-center justify-center rounded-full border border-black/15 text-foreground font-medium transition-colors hover:bg-black/5 dark:border-white/20 dark:hover:bg-white/10 cursor-pointer"
+          className="flex h-12 w-full items-center justify-center rounded-full border border-black/15 bg-black text-white font-medium transition-colors hover:bg-black/70 dark:border-white/20 dark:hover:bg-black/40 cursor-pointer"
           onClick={toggleNewPayment}
         >
           Nuevo Pago
