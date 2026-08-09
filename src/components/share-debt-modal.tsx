@@ -9,6 +9,29 @@ interface ShareDebtModalProps {
   movements: Movement[];
 }
 
+interface PendingOrder {
+  movement: Movement;
+  pendingBalance: number;
+  paidForOrder: number;
+  isPartial: boolean;
+}
+
+const MONEY = (n: number) => `$${Math.round(n).toLocaleString("es-AR")}`;
+
+function orderQty(movement: Movement) {
+  const dozens = movement.dozens > 0 ? `${movement.dozens} docena${movement.dozens > 1 ? "s" : ""}` : "";
+  const units = movement.units > 0 ? `${movement.units} unidad${movement.units > 1 ? "es" : ""}` : "";
+  return [dozens, units].filter(Boolean).join(" y ");
+}
+
+function formatDate(isoDate: string) {
+  return new Date(isoDate + "T00:00:00").toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
 export function ShareDebtModal({
   isOpen,
   onClose,
@@ -23,7 +46,7 @@ export function ShareDebtModal({
   // --------------------------------------------------------------------------
   // LÓGICA FIFO PARA DETECTAR PEDIDOS PENDIENTES
   // --------------------------------------------------------------------------
-  
+
   // 1. Calcular el total acumulado de pagos realizados por el cliente
   const totalPaid = movements
     .filter((m) => m.type === "pago")
@@ -36,11 +59,7 @@ export function ShareDebtModal({
 
   // 3. Absorber el dinero pagado contra los pedidos más antiguos
   let pool = totalPaid;
-  const pendingOrdersWithBalance: Array<{
-    movement: Movement;
-    pendingBalance: number;
-    isPartial: boolean;
-  }> = [];
+  const pendingOrders: PendingOrder[] = [];
 
   for (const order of ordersOldestFirst) {
     const orderAmount = Number(order.amount);
@@ -50,67 +69,76 @@ export function ShareDebtModal({
       pool -= orderAmount;
     } else if (pool > 0) {
       // El pago cubre parcialmente este pedido
-      const remaining = orderAmount - pool;
-      pendingOrdersWithBalance.push({
+      const paidForOrder = pool;
+      pendingOrders.push({
         movement: order,
-        pendingBalance: remaining,
+        pendingBalance: orderAmount - pool,
+        paidForOrder,
         isPartial: true,
       });
-      pool = 0; // Se agotaron los pagos
+      pool = 0;
     } else {
       // No hay pagos aplicables, el pedido está 100% pendiente
-      pendingOrdersWithBalance.push({
+      pendingOrders.push({
         movement: order,
         pendingBalance: orderAmount,
+        paidForOrder: 0,
         isPartial: false,
       });
     }
   }
 
-  // Ordenar los pendientes para el mensaje (del más reciente al más antiguo o viceversa)
-  const pendingListForMessage = pendingOrdersWithBalance.reverse();
-
   // --------------------------------------------------------------------------
-  // CONSTRUCCIÓN DEL MENSAJE FORMATO SOLICITADO
+  // CONSTRUCCIÓN DEL MENSAJE EN LENGUAJE CLARO
   // --------------------------------------------------------------------------
 
-  const formattedTotalDebt = `$${totalDebt.toLocaleString("es-AR")}`;
+  const today = new Date().toLocaleDateString("es-AR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
 
   const messageLines = [
-    `*Resumen de Cuenta - ${clientName.toUpperCase()}*`,
-    `Total pendiente: *${formattedTotalDebt}*`,
+    `Hola ${clientName}! 👋`,
     ``,
-    `*Detalle de pedidos pendientes:*`,
+    `Te paso la cuenta al día de hoy (${today}):`,
+    ``,
   ];
 
-  if (pendingListForMessage.length > 0 && totalDebt > 0) {
-    pendingListForMessage.forEach(({ movement, pendingBalance, isPartial }) => {
-      const dateStr = new Date(movement.date + "T00:00:00").toLocaleDateString("es-AR", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      });
+  if (pendingOrders.length > 0 && totalDebt > 0) {
+    messageLines.push(`💰 *Total a abonar: ${MONEY(totalDebt)}*`, ``);
+    messageLines.push(`Detalle de lo que falta pagar:`, ``);
 
+    const newestFirst = [...pendingOrders].reverse();
+    newestFirst.forEach(({ movement, pendingBalance, paidForOrder, isPartial }) => {
       const product = movement.type === "pedido_facturas" ? "Facturas" : "Medialunas";
-      const dozensStr = movement.dozens > 0 ? `${movement.dozens} doc.` : "";
-      const unitsStr = movement.units > 0 ? `${movement.units} un.` : "";
-      const qtyStr = [dozensStr, unitsStr].filter(Boolean).join(" y ");
-
-      const title = `Pedido (${product}${qtyStr ? ` - ${qtyStr}` : ""})`;
-
-      messageLines.push(`• ${dateStr} - ${title}`);
+      const qty = orderQty(movement);
+      const line = `• ${formatDate(movement.date)} — ${product}${qty ? ` (${qty})` : ""}`;
 
       if (isPartial) {
-        messageLines.push(`   ( Saldo rest.: *$${pendingBalance.toLocaleString("es-AR")}* )`);
+        messageLines.push(
+          line,
+          `    Falta pagar: *${MONEY(pendingBalance)}*`,
+          `    (el pedido era de ${MONEY(
+            Number(movement.amount),
+          )} y ya abonaste ${MONEY(paidForOrder)})`,
+          ``
+        );
       } else {
-        messageLines.push(`   Monto: *$${pendingBalance.toLocaleString("es-AR")}*`);
+        messageLines.push(line, `    Falta pagar: *${MONEY(pendingBalance)}*`, ``);
       }
     });
-  } else if (totalDebt <= 0) {
-    messageLines.push(`• ¡No hay pedidos pendientes! La cuenta está al día.`);
+
+  } else {
+    messageLines.push(
+      `✅ *Tu cuenta está al día!*`,
+      `No tenés deudas pendientes.`,
+      ``,
+      `¡Gracias! 🙌`,
+    );
   }
 
-  const fullMessage = messageLines.join("\n");
+  const fullMessage = messageLines.join("\n").trim();
 
   // Handlers
   const handleCopy = async () => {
@@ -129,11 +157,11 @@ export function ShareDebtModal({
   };
 
   return (
-    <div 
+    <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
       onClick={onClose}
     >
-      <div 
+      <div
         className="w-full max-w-lg rounded-3xl border border-black/10 dark:border-white/10 dark:bg-black bg-white p-6 shadow-2xl flex flex-col gap-5 text-black dark:text-white"
         onClick={(e) => e.stopPropagation()}
       >

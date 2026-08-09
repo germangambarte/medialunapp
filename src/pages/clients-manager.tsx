@@ -71,7 +71,7 @@ export function ClientsManager() {
       <header className="flex flex-col gap-3">
         <div>
           <Link
-            to="/"
+            to="/mayorista"
             className="inline-flex items-center gap-1.5 text-xs text-foreground/60 hover:text-foreground transition-colors"
           >
             ← Volver al Inicio
@@ -80,6 +80,10 @@ export function ClientsManager() {
         <h1 className="text-2xl font-bold text-foreground">
           Gestión de Clientes
         </h1>
+        <p className="text-sm text-foreground/60">
+          Los clientes se usan únicamente para ventas por mayor de facturas y
+          medialunas.
+        </p>
       </header>
 
       {/* Formulario Agregar Cliente */}
@@ -134,7 +138,15 @@ export function ClientsManager() {
       )}
 
       {/* Lista de Clientes */}
-      <section className="flex flex-col gap-3">
+      <section className="flex flex-col gap-2">
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-sm font-semibold text-foreground/70">
+            Clientes registrados
+          </h2>
+          <span className="text-xs text-foreground/40">
+            {clients?.length ?? 0} {clients?.length === 1 ? "cliente" : "clientes"}
+          </span>
+        </div>
         {clients?.map((client) => (
           <div
             key={client.id}

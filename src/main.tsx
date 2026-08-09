@@ -5,6 +5,10 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { StrictMode } from "react";
 import { BrowserRouter, Routes, Route } from "react-router";
 import HomePage from "./pages/home-page";
+import MayoristaPage from "./pages/mayorista-page";
+import FoodDashboardPage from "./pages/food-dashboard-page";
+import SalePage from "./pages/sale-page";
+import ProductsPage from "./pages/products-page";
 import { ClientsManager } from "./pages/clients-manager";
 import ClientDashboardPage from "./pages/client-dashboard-page";
 import { ProtectedRoute } from "./components/protected-route";
@@ -28,6 +32,10 @@ createRoot(document.getElementById("root")!).render(
 
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<HomePage />} />
+            <Route path="/mayorista" element={<MayoristaPage />} />
+            <Route path="/comidas" element={<FoodDashboardPage />} />
+            <Route path="/comidas/venta" element={<SalePage />} />
+            <Route path="/comidas/productos" element={<ProductsPage />} />
             <Route path="/cliente/:id" element={<ClientDashboardPage />} />
             <Route path="/clientes" element={<ClientsManager />} />
           </Route>

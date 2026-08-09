@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router";
-import { useClientDetails } from "../hooks/useClientDetails";
+import { useClientDetails, type Movement } from "../hooks/useClientDetails";
 import { ActivityItem } from "../components/activity-item";
-// Importa tus componentes de formularios cuando los tengas listos
 import { NewOrderForm } from "../components/new-order-form";
 import { NewPaymentForm } from "../components/new-payment-form";
 import { ShareDebtModal } from "../components/share-debt-modal";
+import { MovementModal } from "../components/movement-modal";
+import { useDeleteMovement } from "../hooks/useDeleteMovement";
 
 export default function ClientDashboardPage() {
   const { id } = useParams<{ id: string }>();
@@ -18,9 +19,12 @@ export default function ClientDashboardPage() {
     error,
   } = useClientDetails(clientId);
 
+  const deleteMovement = useDeleteMovement();
+
   const [newOrderFormToggle, setNewOrderFormToggle] = useState(false);
   const [newPaymentFormToggle, setNewPaymentFormToggle] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [editingMovement, setEditingMovement] = useState<Movement | null>(null);
 
   function toggleNewOrder() {
     if (newPaymentFormToggle) setNewPaymentFormToggle(false);
@@ -31,6 +35,18 @@ export default function ClientDashboardPage() {
     if (newOrderFormToggle) setNewOrderFormToggle(false);
     setNewPaymentFormToggle((prev) => !prev);
   }
+
+  const handleDelete = (movement: Movement) => {
+    if (
+      confirm(
+        `¿Eliminar este movimiento del ${new Date(
+          movement.date + "T00:00:00",
+        ).toLocaleDateString("es-AR")}? Esta acción no se puede deshacer.`,
+      )
+    ) {
+      deleteMovement.mutate({ id: movement.id, client_id: clientId });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -48,11 +64,27 @@ export default function ClientDashboardPage() {
         <p className="text-red-500">
           Error: {error ? (error as Error).message : "Cliente no encontrado"}
         </p>
-        <Link to="/" className="text-sm underline mt-4 inline-block">
+        <Link to="/mayorista" className="text-sm underline mt-4 inline-block">
           Volver al inicio
         </Link>
       </main>
     );
+  }
+
+  const totalOrders = client.movements
+    .filter((m) => m.type !== "pago")
+    .reduce((acc, m) => acc + Number(m.amount), 0);
+  const totalPaid = client.movements
+    .filter((m) => m.type === "pago")
+    .reduce((acc, m) => acc + Number(m.amount), 0);
+
+  const signedMap = new Map<string, number>();
+  {
+    let acc = 0;
+    for (const m of [...client.movements].reverse()) {
+      acc += m.type === "pago" ? -Number(m.amount) : Number(m.amount);
+      signedMap.set(m.id, acc);
+    }
   }
 
   return (
@@ -60,7 +92,7 @@ export default function ClientDashboardPage() {
       {/* Top Bar: Volver y Compartir */}
       <div className="flex items-center justify-between">
         <Link
-          to="/"
+          to="/mayorista"
           className="inline-flex items-center text-xs font-medium text-foreground/60 hover:text-foreground transition-colors"
         >
           ← Volver a clientes
@@ -76,12 +108,12 @@ export default function ClientDashboardPage() {
       </div>
 
       {/* Hero Display de Deuda */}
-      <section className="relative overflow-hidden rounded-3xl p-6 bg-gradient-to-br from-black/[0.04] to-black/[0.01] dark:from-white/[0.08] dark:to-white/[0.02] border border-black/10 dark:border-white/10 shadow-sm flex flex-col items-center text-center gap-2">
+      <section className="relative overflow-hidden rounded-3xl p-6 bg-gradient-to-br from-black/[0.04] to-black/[0.01] dark:from-white/[0.08] dark:to-white/[0.02] border border-black/10 dark:border-white/10 shadow-sm flex flex-col items-center text-center gap-3">
         <span className="text-xs font-semibold tracking-wider uppercase text-foreground/50">
           Estado de Cuenta • {client.name}
         </span>
 
-        <div className="flex items-baseline gap-1 my-1">
+        <div className="flex items-baseline gap-1">
           <span className="text-2xl font-bold text-foreground/60">$</span>
           <h1 className="text-5xl font-extrabold tracking-tight text-foreground">
             {client.totalDebt.toLocaleString("es-AR")}
@@ -106,6 +138,26 @@ export default function ClientDashboardPage() {
             ? "Saldo pendiente de pago"
             : "Al día / Sin deuda"}
         </div>
+
+        {/* Resumen de movimientos */}
+        <div className="grid grid-cols-2 gap-3 w-full mt-2">
+          <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/40 dark:bg-white/5 p-3 flex flex-col gap-0.5">
+            <span className="text-[11px] uppercase tracking-wide text-foreground/50">
+              Total pedidos
+            </span>
+            <span className="text-base font-bold text-foreground">
+              ${totalOrders.toLocaleString("es-AR")}
+            </span>
+          </div>
+          <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-white/40 dark:bg-white/5 p-3 flex flex-col gap-0.5">
+            <span className="text-[11px] uppercase tracking-wide text-foreground/50">
+              Total pagado
+            </span>
+            <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">
+              ${totalPaid.toLocaleString("es-AR")}
+            </span>
+          </div>
+        </div>
       </section>
 
       {newOrderFormToggle && (
@@ -128,14 +180,26 @@ export default function ClientDashboardPage() {
 
       {/* Historial de Actividad / Movimientos */}
       <section className="flex flex-col gap-2">
-        <h2 className="text-sm font-semibold text-foreground/70 px-1">
-          Historial de Movimientos
-        </h2>
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-sm font-semibold text-foreground/70">
+            Historial de Movimientos
+          </h2>
+          <span className="text-xs text-foreground/40">
+            {client.movements.length}{" "}
+            {client.movements.length === 1 ? "movimiento" : "movimientos"}
+          </span>
+        </div>
 
         {client.movements.length > 0 ? (
           <div className="flex flex-col gap-1">
             {client.movements.map((mov) => (
-              <ActivityItem key={mov.id} movement={mov} />
+              <ActivityItem
+                key={mov.id}
+                movement={mov}
+                runningBalance={signedMap.get(mov.id)}
+                onEdit={() => setEditingMovement(mov)}
+                onDelete={() => handleDelete(mov)}
+              />
             ))}
           </div>
         ) : (
@@ -170,6 +234,14 @@ export default function ClientDashboardPage() {
         totalDebt={client.totalDebt}
         movements={client.movements}
       />
+
+      {editingMovement && (
+        <MovementModal
+          key={editingMovement.id}
+          movement={editingMovement}
+          onClose={() => setEditingMovement(null)}
+        />
+      )}
     </div>
   );
 }

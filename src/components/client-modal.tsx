@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface ClientModalProps {
   isOpen: boolean;
@@ -16,10 +16,12 @@ export const ClientModal = ({
   title,
 }: ClientModalProps) => {
   const [name, setName] = useState(initialName);
+  const [lastProps, setLastProps] = useState({ initialName, isOpen });
 
-  useEffect(() => {
-    setName(initialName);
-  }, [initialName, isOpen]);
+  if (lastProps.initialName !== initialName || lastProps.isOpen !== isOpen) {
+    setLastProps({ initialName, isOpen });
+    if (isOpen) setName(initialName);
+  }
 
   if (!isOpen) return null;
 

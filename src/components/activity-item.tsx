@@ -1,4 +1,3 @@
-// src/components/ActivityItem.tsx
 import type { Movement } from "../hooks/useClientDetails";
 
 const TYPE_CONFIG = {
@@ -22,11 +21,22 @@ const TYPE_CONFIG = {
   },
 };
 
-export const ActivityItem = ({ movement }: { movement: Movement }) => {
+interface ActivityItemProps {
+  movement: Movement;
+  runningBalance?: number;
+  onEdit?: () => void;
+  onDelete?: () => void;
+}
+
+export const ActivityItem = ({
+  movement,
+  runningBalance,
+  onEdit,
+  onDelete,
+}: ActivityItemProps) => {
   const config = TYPE_CONFIG[movement.type];
 
-  // Generar subtítulo dinámico
-  let subtitle = "";
+  let subtitle: string;
   if (movement.type === "pago") {
     const method = movement.payment_method
       ? movement.payment_method.charAt(0).toUpperCase() +
@@ -36,10 +46,10 @@ export const ActivityItem = ({ movement }: { movement: Movement }) => {
   } else {
     const dozensStr = movement.dozens > 0 ? `${movement.dozens} doc.` : "";
     const unitsStr = movement.units > 0 ? `${movement.units} un.` : "";
-    subtitle = [dozensStr, unitsStr].filter(Boolean).join(" y ") || "1 docena";
+    const qty = [dozensStr, unitsStr].filter(Boolean).join(" y ") || "1 docena";
+    subtitle = movement.notes ? `${qty} • ${movement.notes}` : qty;
   }
 
-  // Formatear la fecha ingresada
   const formattedDate = new Date(
     movement.date + "T00:00:00",
   ).toLocaleDateString("es-AR", {
@@ -51,11 +61,11 @@ export const ActivityItem = ({ movement }: { movement: Movement }) => {
   return (
     <div className="flex items-center justify-between w-full p-3 rounded-2xl transition-colors hover:bg-black/5 dark:hover:bg-white/5">
       {/* Icono de la actividad */}
-      <div className="flex items-center justify-center shrink-0 w-12 h-12 rounded-full bg-white p-2.5">
+      <div className="flex items-center justify-center shrink-0 w-11 h-11 rounded-full bg-white dark:bg-white/10 p-2.5">
         <img
           src={config.icon}
           alt={config.alt}
-          className="w-8 h-8 object-contain"
+          className="w-7 h-7 object-contain"
         />
       </div>
 
@@ -79,8 +89,40 @@ export const ActivityItem = ({ movement }: { movement: Movement }) => {
           {config.isExpense ? "-" : "+"} $
           {Number(movement.amount).toLocaleString("es-AR")}
         </p>
-        <p className="text-xs text-foreground/50">{formattedDate}</p>
+        <p className="text-xs text-foreground/50">
+          {formattedDate}
+          {runningBalance !== undefined && (
+            <span className="text-foreground/35">
+              {" "}
+              • saldo ${runningBalance.toLocaleString("es-AR")}
+            </span>
+          )}
+        </p>
       </div>
+
+      {/* Acciones */}
+      {(onEdit || onDelete) && (
+        <div className="flex flex-col gap-1 shrink-0 ml-2">
+          {onEdit && (
+            <button
+              onClick={onEdit}
+              className="w-7 h-7 flex items-center justify-center rounded-full border border-black/10 dark:border-white/10 text-xs text-foreground/60 hover:text-foreground hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
+              title="Editar"
+            >
+              ✏️
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={onDelete}
+              className="w-7 h-7 flex items-center justify-center rounded-full border border-red-500/15 text-xs text-red-500/60 hover:text-red-500 hover:bg-red-500/10 transition-colors"
+              title="Eliminar"
+            >
+              🗑
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 };
